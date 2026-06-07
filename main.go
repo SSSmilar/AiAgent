@@ -22,6 +22,18 @@ type Choice struct {
 	Message Message `json:"message"`
 }
 
+func GetApiKey() (string, error) {
+	err := godotenv.Load()
+	if err != nil {
+		return "", fmt.Errorf("error loading .env file: %w", err)
+	}
+	apiKey := os.Getenv("OPENAI_API_KEY")
+
+	if apiKey == "" {
+		return "", fmt.Errorf("OPENAI_API_KEY is not set")
+	}
+	return apiKey, nil
+}
 func main() {
 	
 }
