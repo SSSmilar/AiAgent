@@ -23,5 +23,5 @@ type Choice struct {
 }
 
 func main() {
-
+	
 }
