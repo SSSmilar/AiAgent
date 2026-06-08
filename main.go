@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -48,5 +52,48 @@ func main() {
 		slog.Error("Ошибка получения API KEY", err)
 		os.Exit(1)
 	}
-	
+
+}
+func ask(apiKey string, system string, dialogs []Message) (string, error) {
+	messages := []Message{
+		{Role: "system", Content: system},
+	}
+	messages = append(messages, dialogs...)
+	reqBody := ChatRequest{
+		Model:    "gemini-2.5-flash", //Юзаю фри модель , но при сложных задачах можно будет просто сменить тут модель и пополнить счёт в Google AI Studio.
+		Messages: messages,           //история диалога.
+	}
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request to JSON: %w", err)
+	}
+	//Google URL с поддержкой OpenAI.
+	url := "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("Err HTTP request: %w ", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	//Создаём клиента и делаем  запрос .
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("Err HTTP response: %w ", err)
+	}
+	defer resp.Body.Close()
+	//Проверяем  статус ответа , так как если он не 200 мы получим бред после парсинга .
+	if resp.StatusCode != http.StatusOK {
+		errorBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("API error: status %d, details: %s", resp.StatusCode, string(errorBody))
+	}
+	var chatResp ChatResponse
+	if err := json.NewDecoder(resp.Body).Decode(&chatResp); err != nil {
+		return "", fmt.Errorf("Err decoding response: %w ", err)
+	}
+	if len(chatResp.Choices) == 0 {
+		return "", fmt.Errorf("model returned no choices ")
+	}
+	return chatResp.Choices[0].Message.Content, nil
 }
