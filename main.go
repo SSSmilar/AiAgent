@@ -53,9 +53,9 @@ func main() {
 		slog.Error("Error receiving API KEY ", "details", err)
 		os.Exit(1)
 	}
-	task := "У фермера 17 овец. Все, кроме 9, убежали. Сколько осталось?"
+	task := "Сколько будет стоить год владения CLS 2007 AMG на компресоре , при ежедневном использование"
 
-	ReAct(apiKey, task)
+	Plan(apiKey, task)
 }
 func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	messages := []Message{
