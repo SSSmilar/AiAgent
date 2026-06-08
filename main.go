@@ -1,5 +1,13 @@
 package main
 
+import (
+	"fmt"
+	"log/slog"
+	"os"
+
+	"github.com/joho/godotenv"
+)
+
 // Message описывает одну реплику в диалоге.
 type Message struct {
 	Role    string `json:"role"`
@@ -35,5 +43,10 @@ func GetApiKey() (string, error) {
 	return apiKey, nil
 }
 func main() {
+	apiKey, err := GetApiKey()
+	if err != nil {
+		slog.Error("Ошибка получения API KEY", err)
+		os.Exit(1)
+	}
 	
 }
