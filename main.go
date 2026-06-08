@@ -46,6 +46,19 @@ func GetApiKey() (string, error) {
 	}
 	return apiKey, nil
 }
+
+const reactSystem = `Ты решаешь задачу по циклу think → act → observe, без внешних инструментов.
+На каждом шаге выводи РОВНО один блок:
+
+Thought: <короткое рассуждение>
+Action: PROPOSE: <текущий вариант ответа>
+   - или -
+Action: FINAL: <ответ, в котором ты уверен>
+
+После PROPOSE я пришлю Observation с просьбой перепроверить.
+Перепроверь и либо исправь (снова PROPOSE), либо зафиксируй (FINAL).
+Делай по одному шагу за раз, не выкладывай все решение сразу.`
+
 func main() {
 	apiKey, err := GetApiKey()
 	if err != nil {
