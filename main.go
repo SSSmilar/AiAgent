@@ -49,7 +49,7 @@ func GetApiKey() (string, error) {
 func main() {
 	apiKey, err := GetApiKey()
 	if err != nil {
-		slog.Error("Ошибка получения API KEY", err)
+		slog.Error("Error receiving API KEY ", "details", err)
 		os.Exit(1)
 	}
 
