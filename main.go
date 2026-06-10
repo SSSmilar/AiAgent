@@ -34,6 +34,28 @@ type Choice struct {
 	Message Message `json:"message"`
 }
 
+// Contributor - структура которую я буду мапить в таблицу .
+type Contributor struct {
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
+func GetContributors() (contributors []Contributor, err error) {
+
+}
+
+func GetDataBaseURL() (string, error) {
+
+	err := godotenv.Load()
+	if err != nil {
+		return "", fmt.Errorf("error loading .env file: %w", err)
+	}
+	url := os.Getenv("DATABASE_URL")
+	if url == "" {
+		return "", fmt.Errorf("DATABASE_URL is not set")
+	}
+	return url, nil
+}
 func GetAPIKey() (string, error) {
 	err := godotenv.Load()
 	if err != nil {
