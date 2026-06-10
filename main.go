@@ -33,6 +33,18 @@ type ChatResponse struct {
 type Choice struct {
 	Message Message `json:"message"`
 }
+func GetDataBaseURL() (string, error) {
+
+	err := godotenv.Load()
+	if err != nil {
+		return "", fmt.Errorf("error loading .env file: %w", err)
+	}
+	url := os.Getenv("DATABASE_URL")
+	if url == "" {
+		return "", fmt.Errorf("DATABASE_URL is not set")
+	}
+	return url, nil
+}
 
 func GetAPIKey() (string, error) {
 	err := godotenv.Load()
