@@ -34,7 +34,7 @@ type Choice struct {
 	Message Message `json:"message"`
 }
 
-func GetApiKey() (string, error) {
+func GetAPIKey() (string, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return "", fmt.Errorf("error loading .env file: %w", err)
@@ -48,7 +48,7 @@ func GetApiKey() (string, error) {
 }
 
 func main() {
-	apiKey, err := GetApiKey()
+	apiKey, err := GetAPIKey()
 	if err != nil {
 		slog.Error("Error receiving API KEY ", "details", err)
 		os.Exit(1)
