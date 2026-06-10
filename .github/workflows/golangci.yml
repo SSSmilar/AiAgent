@@ -13,11 +13,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/setup-go@v6.0.0
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
         with:
-          go-version-file: '1.25.0'
+          go-version-file: go.mod
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v7    # было v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.12.2
