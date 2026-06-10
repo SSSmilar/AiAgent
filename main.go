@@ -56,6 +56,7 @@ func main() {
 	task := "Сколько будет стоить год владения CLS 2007 AMG на компресоре , при ежедневном использование"
 
 	Plan(apiKey, task)
+	ReAct(apiKey, task)
 }
 func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	messages := []Message{
@@ -85,7 +86,11 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Err HTTP response: %w ", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("Error closing response body ", "details", err)
+		}
+	}()
 	//Проверяем  статус ответа , так как если он не 200 мы получим бред после парсинга .
 	if resp.StatusCode != http.StatusOK {
 		errorBody, _ := io.ReadAll(resp.Body)
