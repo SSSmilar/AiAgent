@@ -76,7 +76,7 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return "", fmt.Errorf("Err HTTP request: %w ", err)
+		return "", fmt.Errorf("http request error: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
@@ -84,7 +84,7 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Err HTTP response: %w ", err)
+		return "", fmt.Errorf("http response error: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -98,7 +98,7 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	}
 	var chatResp ChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&chatResp); err != nil {
-		return "", fmt.Errorf("Err decoding response: %w ", err)
+		return "", fmt.Errorf("decoding response error: %w", err)
 	}
 	if len(chatResp.Choices) == 0 {
 		return "", fmt.Errorf("model returned no choices ")
