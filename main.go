@@ -93,7 +93,10 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	}()
 	//Проверяем  статус ответа , так как если он не 200 мы получим бред после парсинга .
 	if resp.StatusCode != http.StatusOK {
-		errorBody, _ := io.ReadAll(resp.Body)
+		errorBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("reading response error: %w", err)
+		}
 		return "", fmt.Errorf("API error: status %d, details: %s", resp.StatusCode, string(errorBody))
 	}
 	var chatResp ChatResponse
