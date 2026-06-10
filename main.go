@@ -33,6 +33,14 @@ type ChatResponse struct {
 type Choice struct {
 	Message Message `json:"message"`
 }
+
+// Contributor - структура которую я буду мапить в таблицу .
+type Contributor struct {
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
+
 func GetDataBaseURL() (string, error) {
 
 	err := godotenv.Load()
