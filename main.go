@@ -56,6 +56,7 @@ func main() {
 	task := "Сколько будет стоить год владения CLS 2007 AMG на компресоре , при ежедневном использование"
 
 	Plan(apiKey, task)
+	ReAct(apiKey, task)
 }
 func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	messages := []Message{
