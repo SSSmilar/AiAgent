@@ -1,0 +1,22 @@
+# Taskfile.yml
+version: '3'
+
+vars:
+  GOLANGCI_VERSION:  v2.12.2
+
+tasks:
+  lint:
+    desc: Run golangci-lint (same as GitHub Actions)
+    cmds:
+      - golangci-lint run ./...
+
+  lint:install:
+    desc: Install golangci-lint v1.64.8
+    cmds:
+      - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_VERSION}}
+
+  lint:ci:
+    desc: Install (if needed) and run lint
+    deps: [lint:install]
+    cmds:
+      - golangci-lint run ./...

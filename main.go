@@ -34,7 +34,7 @@ type Choice struct {
 	Message Message `json:"message"`
 }
 
-func GetApiKey() (string, error) {
+func GetAPIKey() (string, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return "", fmt.Errorf("error loading .env file: %w", err)
@@ -48,7 +48,7 @@ func GetApiKey() (string, error) {
 }
 
 func main() {
-	apiKey, err := GetApiKey()
+	apiKey, err := GetAPIKey()
 	if err != nil {
 		slog.Error("Error receiving API KEY ", "details", err)
 		os.Exit(1)
@@ -76,7 +76,7 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return "", fmt.Errorf("Err HTTP request: %w ", err)
+		return "", fmt.Errorf("http request error: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
@@ -84,7 +84,7 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Err HTTP response: %w ", err)
+		return "", fmt.Errorf("http response error: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -93,15 +93,18 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	}()
 	//Проверяем  статус ответа , так как если он не 200 мы получим бред после парсинга .
 	if resp.StatusCode != http.StatusOK {
-		errorBody, _ := io.ReadAll(resp.Body)
+		errorBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("reading response error: %w", err)
+		}
 		return "", fmt.Errorf("API error: status %d, details: %s", resp.StatusCode, string(errorBody))
 	}
 	var chatResp ChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&chatResp); err != nil {
-		return "", fmt.Errorf("Err decoding response: %w ", err)
+		return "", fmt.Errorf("decoding response error: %w", err)
 	}
 	if len(chatResp.Choices) == 0 {
-		return "", fmt.Errorf("model returned no choices ")
+		return "", fmt.Errorf("model returned no choices")
 	}
 	return chatResp.Choices[0].Message.Content, nil
 }
