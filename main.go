@@ -101,7 +101,7 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 		return "", fmt.Errorf("decoding response error: %w", err)
 	}
 	if len(chatResp.Choices) == 0 {
-		return "", fmt.Errorf("model returned no choices ")
+		return "", fmt.Errorf("model returned no choices")
 	}
 	return chatResp.Choices[0].Message.Content, nil
 }
