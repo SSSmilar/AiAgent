@@ -2,13 +2,16 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -40,6 +43,47 @@ type Contributor struct {
 	Role string `json:"role"`
 }
 
+func GetContributors() (contributors []Contributor, err error) {
+	databaseURL, err := GetDataBaseURL()
+	if err != nil {
+		slog.Error("Error receiving API KEY ", "details", err)
+		return nil, err
+	}
+	ctx, ctxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer ctxCancel()
+	dataBaseConnect, err := pgx.Connect(ctx, databaseURL)
+	if err != nil {
+		slog.Error("Error connecting to database ", "details", err)
+		return nil, err
+	}
+	defer func() {
+		if err := dataBaseConnect.Close(ctx); err != nil {
+			slog.Error("Error closing database connection ", "details", err)
+		}
+	}()
+	var contributorsData []Contributor
+	rows, err := dataBaseConnect.Query(ctx, "SELECT login , commits_count FROM gitRepo")
+	if err != nil {
+		slog.Error("Error scanning contributors from database ", "details", err)
+		return nil, err
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		contributor := Contributor{}
+		err := rows.Scan(&contributor.Name, &contributor.Role)
+		if err != nil {
+			slog.Error("Error scanning contributors from database ", "details", err)
+			continue
+		}
+		contributorsData = append(contributorsData, contributor)
+	}
+	if rows.Err() != nil {
+		slog.Error("Error scanning contributors from database ", "details", rows.Err())
+		return nil, rows.Err()
+	}
+	return contributorsData, nil
+}
 
 func GetDataBaseURL() (string, error) {
 
