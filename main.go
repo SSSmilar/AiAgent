@@ -39,8 +39,8 @@ type Choice struct {
 
 // Contributor - структура которую я буду мапить в таблицу .
 type Contributor struct {
-	Name string `json:"name"`
-	Role string `json:"role"`
+	Login       string `json:"login"`
+	CommitCount int    `json:"commit_count"`
 }
 
 func GetContributors() (contributors []Contributor, err error) {
@@ -62,7 +62,7 @@ func GetContributors() (contributors []Contributor, err error) {
 		}
 	}()
 	var contributorsData []Contributor
-	rows, err := dataBaseConnect.Query(ctx, "SELECT login , commits_count FROM gitRepo")
+	rows, err := dataBaseConnect.Query(ctx, "SELECT login , commit_count FROM gitRepo")
 	if err != nil {
 		slog.Error("Error scanning contributors from database ", "details", err)
 		return nil, err
@@ -71,7 +71,7 @@ func GetContributors() (contributors []Contributor, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		contributor := Contributor{}
-		err := rows.Scan(&contributor.Name, &contributor.Role)
+		err := rows.Scan(&contributor.Login, &contributor.CommitCount)
 		if err != nil {
 			slog.Error("Error scanning contributors from database ", "details", err)
 			continue
