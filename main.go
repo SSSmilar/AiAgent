@@ -2,13 +2,16 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -32,6 +35,67 @@ type ChatResponse struct {
 // Choice - это варант ответа от модели (по дефолту берём первый но можем ставить другой от модельки скейл обычно.
 type Choice struct {
 	Message Message `json:"message"`
+}
+
+// Contributor - структура которую я буду мапить в таблицу .
+type Contributor struct {
+	Login       string `json:"login"`
+	CommitCount int    `json:"commit_count"`
+}
+
+func GetContributors() (contributors []Contributor, err error) {
+	databaseURL, err := GetDataBaseURL()
+	if err != nil {
+		slog.Error("Error receiving API KEY ", "details", err)
+		return nil, err
+	}
+	ctx, ctxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer ctxCancel()
+	dataBaseConnect, err := pgx.Connect(ctx, databaseURL)
+	if err != nil {
+		slog.Error("Error connecting to database ", "details", err)
+		return nil, err
+	}
+	defer func() {
+		if err := dataBaseConnect.Close(ctx); err != nil {
+			slog.Error("Error closing database connection ", "details", err)
+		}
+	}()
+	var contributorsData []Contributor
+	rows, err := dataBaseConnect.Query(ctx, "SELECT login , commit_count FROM gitRepo")
+	if err != nil {
+		slog.Error("Error scanning contributors from database ", "details", err)
+		return nil, err
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		contributor := Contributor{}
+		err := rows.Scan(&contributor.Login, &contributor.CommitCount)
+		if err != nil {
+			slog.Error("Error scanning contributors from database ", "details", err)
+			continue
+		}
+		contributorsData = append(contributorsData, contributor)
+	}
+	if rows.Err() != nil {
+		slog.Error("Error scanning contributors from database ", "details", rows.Err())
+		return nil, rows.Err()
+	}
+	return contributorsData, nil
+}
+
+func GetDataBaseURL() (string, error) {
+
+	err := godotenv.Load()
+	if err != nil {
+		return "", fmt.Errorf("error loading .env file: %w", err)
+	}
+	url := os.Getenv("DATABASE_URL")
+	if url == "" {
+		return "", fmt.Errorf("DATABASE_URL is not set")
+	}
+	return url, nil
 }
 
 func GetAPIKey() (string, error) {
