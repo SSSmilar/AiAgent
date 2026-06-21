@@ -22,12 +22,13 @@ Action: FINAL: <ответ, в котором ты уверен>
 
 const Observation = "Observation: перечитай свой вариант. Есть ошибка - исправь, иначе зафиксируй FINAL."
 
-func ReAct(apiKey string, Tools []Tool, task string) {
+func ReAct(apiKey string, Tools []Tool, task string, writerSystem string) (string, error) {
+	systemPrompt := fmt.Sprintf("%s\n\n%s", reactSystem, writerSystem)
 	var dialogs []Message
 	dialogs = append(dialogs, Message{Role: "user", Content: task})
 
 	for i := 0; i < 5; i++ {
-		respMsg, err := ask(apiKey, Tools, reactSystem, dialogs)
+		respMsg, err := ask(apiKey, Tools, systemPrompt, dialogs)
 		if err != nil {
 			slog.Error("Error sending request to API", "details", err)
 			os.Exit(1)
@@ -63,9 +64,11 @@ func ReAct(apiKey string, Tools []Tool, task string) {
 		fmt.Printf("\n=== Iteration %d ===\n%s\n=== End ===\n", i+1, respMsg.Content)
 
 		if strings.Contains(respMsg.Content, "FINAL") {
-			break
+			return respMsg.Content, nil
+
 		}
-		
+
 		dialogs = append(dialogs, Message{Role: "user", Content: Observation})
 	}
+	return "", fmt.Errorf("maximum number of iterations reached")
 }
