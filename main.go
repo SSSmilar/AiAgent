@@ -142,8 +142,20 @@ func main() {
 	}
 	task := "Узнай, кто контрибьютил в наш репозиторий и выведи их логины"
 
-	Plan(apiKey, task)
-	ReAct(apiKey, task)
+	MyTools := []Tool{
+		{
+			Type: "function",
+			Function: ToolFunction{
+				Name:        "GetContributors",
+				Description: "Получает список контрибьюторов репозитория из базы данных ",
+				Parameters: map[string]any{
+					"type":       "object",
+					"properties": map[string]any{},
+				},
+			},
+		},
+	}
+	Plan(apiKey, MyTools, task)
 }
 func ask(apiKey string, tool []Tool, system string, dialogs []Message) (Message, error) {
 	messages := []Message{
