@@ -10,15 +10,15 @@ import (
 const plannerSystem = "Ты - планировщик. Разбей задачу на 3–5 атомарных пунктов, по одному в строке. Только план, не выполняй."
 const writerSystem = "Ты - исполнитель. Напиши ОДИН пункт кратко (2–3 предложения), не повторяя уже написанное."
 
-func Plan(apiKey string, task string) {
+func Plan(apiKey string, MyTools []Tool, task string) {
 
-	response, err := ask(apiKey, plannerSystem, []Message{{Role: "user", Content: task}})
+	response, err := ask(apiKey, nil, plannerSystem, []Message{{Role: "user", Content: task}})
 	if err != nil {
 		slog.Error("Error sending request to API ", "details", err)
 		os.Exit(1)
 	}
 	//Рубим на пукты для работы .
-	steps := strings.Split(response, "\n")
+	steps := strings.Split(response.Content, "\n")
 	//Массив для ответов .
 	var done []string
 	//Прохожусь по всем шагам и добовляю ответы в массив .
@@ -34,7 +34,7 @@ func Plan(apiKey string, task string) {
 
 		executor := Message{Role: "user", Content: prompt}
 
-		response, err := ask(apiKey, writerSystem, []Message{executor})
+		response, err := ReAct(apiKey, MyTools, executor.Content, writerSystem)
 		if err != nil {
 			slog.Error("Error sending request to API ", "details", err)
 			os.Exit(1)

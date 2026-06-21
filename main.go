@@ -17,14 +17,18 @@ import (
 
 // Message описывает одну реплику в диалоге.
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role       string     `json:"role"`
+	Content    string     `json:"content,omitempty"`
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string     `json:"tool_call_id,omitempty"`
 }
 
 // ChatRequest  описывает то что мы отправляем (POST body).
 type ChatRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
+	Model       string    `json:"model"`
+	Messages    []Message `json:"messages"`
+	Tools       []Tool    `json:"tools,omitempty"`
+	Temperature float64   `json:"temperature,omitempty"`
 }
 
 // ChatResponse описывает то что мы получаем в ответ.
@@ -41,6 +45,26 @@ type Choice struct {
 type Contributor struct {
 	Login       string `json:"login"`
 	CommitCount int    `json:"commit_count"`
+}
+type Tool struct {
+	Type     string       `json:"type"`
+	Function ToolFunction `json:"function"`
+}
+type ToolFunction struct {
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Parameters  map[string]any `json:"parameters"`
+}
+
+// ToolCall and FunctionCall Структуры для парсинга ответа модели .
+type ToolCall struct {
+	ID       string       `json:"id"`
+	Type     string       `json:"type"`
+	Function FunctionCall `json:"function"`
+}
+type FunctionCall struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
 }
 
 func GetContributors() (contributors []Contributor, err error) {
@@ -103,10 +127,10 @@ func GetAPIKey() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error loading .env file: %w", err)
 	}
-	apiKey := os.Getenv("OPENAI_API_KEY")
+	apiKey := os.Getenv("GROQ_API_KEY")
 
 	if apiKey == "" {
-		return "", fmt.Errorf("OPENAI_API_KEY is not set")
+		return "", fmt.Errorf("GROQ_API_KEY is not set")
 	}
 	return apiKey, nil
 }
@@ -117,30 +141,44 @@ func main() {
 		slog.Error("Error receiving API KEY ", "details", err)
 		os.Exit(1)
 	}
-	task := "Сколько будет стоить год владения CLS 2007 AMG на компресоре , при ежедневном использование"
+	task := "Узнай, кто контрибьютил в наш репозиторий и выведи их логины"
 
-	Plan(apiKey, task)
-	ReAct(apiKey, task)
+	MyTools := []Tool{
+		{
+			Type: "function",
+			Function: ToolFunction{
+				Name:        "GetContributors",
+				Description: "Получает список контрибьюторов репозитория из базы данных ",
+				Parameters: map[string]any{
+					"type":       "object",
+					"properties": map[string]any{},
+				},
+			},
+		},
+	}
+
+	Plan(apiKey, MyTools, task)
 }
-func ask(apiKey string, system string, dialogs []Message) (string, error) {
+func ask(apiKey string, tool []Tool, system string, dialogs []Message) (Message, error) {
 	messages := []Message{
 		{Role: "system", Content: system},
 	}
 	messages = append(messages, dialogs...)
 	reqBody := ChatRequest{
-		Model:    "gemini-2.5-flash", //Юзаю фри модель , но при сложных задачах можно будет просто сменить тут модель и пополнить счёт в Google AI Studio.
-		Messages: messages,           //история диалога.
+		Model:    "meta-llama/llama-4-scout-17b-16e-instruct", //Юзаю фри модель , но при сложных задачах можно будет просто сменить тут модель и пополнить счёт в Google AI Studio.
+		Messages: messages,                                    //история диалога.
+		Tools:    tool,
 	}
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request to JSON: %w", err)
+		return Message{}, fmt.Errorf("failed to marshal request to JSON: %w", err)
 	}
 	//Google URL с поддержкой OpenAI.
-	url := "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+	url := "https://api.groq.com/openai/v1/chat/completions"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return "", fmt.Errorf("http request error: %w", err)
+		return Message{}, fmt.Errorf("http request error: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
@@ -148,7 +186,7 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("http response error: %w", err)
+		return Message{}, fmt.Errorf("http response error: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -159,16 +197,16 @@ func ask(apiKey string, system string, dialogs []Message) (string, error) {
 	if resp.StatusCode != http.StatusOK {
 		errorBody, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return "", fmt.Errorf("reading response error: %w", err)
+			return Message{}, fmt.Errorf("reading response error: %w", err)
 		}
-		return "", fmt.Errorf("API error: status %d, details: %s", resp.StatusCode, string(errorBody))
+		return Message{}, fmt.Errorf("API error: status %d, details: %s", resp.StatusCode, string(errorBody))
 	}
 	var chatResp ChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&chatResp); err != nil {
-		return "", fmt.Errorf("decoding response error: %w", err)
+		return Message{}, fmt.Errorf("decoding response error: %w", err)
 	}
 	if len(chatResp.Choices) == 0 {
-		return "", fmt.Errorf("model returned no choices")
+		return Message{}, fmt.Errorf("model returned no choices")
 	}
-	return chatResp.Choices[0].Message.Content, nil
+	return chatResp.Choices[0].Message, nil
 }

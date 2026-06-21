@@ -1,2 +1,8 @@
 .idea/
 .env
+SonarQube.yml
+.golangci.yml
+sonar-project.properties
+coverage.out
+golangci-lint-report.xml
+Taskfile.yml

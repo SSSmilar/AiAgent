@@ -1,13 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
 )
 
-const reactSystem = `Ты решаешь задачу по циклу think → act → observe, без внешних инструментов.
+const reactSystem = `Ты решаешь задачу по циклу think → act → observe .
 На каждом шаге выводи РОВНО один блок:
 
 Thought: <короткое рассуждение>
@@ -21,30 +22,53 @@ Action: FINAL: <ответ, в котором ты уверен>
 
 const Observation = "Observation: перечитай свой вариант. Есть ошибка - исправь, иначе зафиксируй FINAL."
 
-func ReAct(apiKey string, task string) {
-	dialogs := []Message{{
-		Role:    "user",
-		Content: task,
-	}}
-	//Ограничил ReAct  5 запросами так как при долгом размышлении она может просто дизентигрировать токены .
+func ReAct(apiKey string, Tools []Tool, task string, writerSystem string) (string, error) {
+	systemPrompt := fmt.Sprintf("%s\n\n%s", reactSystem, writerSystem)
+	var dialogs []Message
+	dialogs = append(dialogs, Message{Role: "user", Content: task})
+
 	for i := 0; i < 5; i++ {
-		//Вызываю запрос к LLM
-		response, err := ask(apiKey, reactSystem, dialogs)
+		respMsg, err := ask(apiKey, Tools, systemPrompt, dialogs)
 		if err != nil {
-			slog.Error("Error sending request to API ", "details", err)
+			slog.Error("Error sending request to API", "details", err)
 			os.Exit(1)
 		}
-		//Вывожу  в консоль на каждом этапе чтобы видеть процесс размышления .
-		fmt.Printf("\n=== Iteration %d ===\n ", i+1)
-		fmt.Println(response)
-		fmt.Println("=== End ===\n ")
-		//Вывожу ответы в консоль чтобы видеть как модель думает .
-		dialogs = append(dialogs, Message{Role: "assistant", Content: response})
-		//Проверяю на финал , если не финал отправляю модель дальше думать .
-		if strings.Contains(response, "FINAL") {
-			break
+
+		dialogs = append(dialogs, respMsg)
+
+		// ВЕТКА Б: Модель вызвала инструмент
+		if len(respMsg.ToolCalls) > 0 {
+			for _, toolCall := range respMsg.ToolCalls {
+				if toolCall.Function.Name == "GetContributors" {
+					contributors, err := GetContributors()
+					var content string
+
+					if err != nil {
+						slog.Error("Database error", "details", err)
+						content = fmt.Sprintf(`{"error": "%s"}`, err.Error())
+					} else {
+						contributorsJSON, _ := json.Marshal(contributors)
+						content = string(contributorsJSON)
+					}
+
+					dialogs = append(dialogs, Message{
+						Role:       "tool",
+						Content:    content,
+						ToolCallID: toolCall.ID,
+					})
+				}
+			}
+			continue
+		}
+
+		fmt.Printf("\n=== Iteration %d ===\n%s\n=== End ===\n", i+1, respMsg.Content)
+
+		if strings.Contains(respMsg.Content, "FINAL") {
+			return respMsg.Content, nil
+
 		}
 
 		dialogs = append(dialogs, Message{Role: "user", Content: Observation})
 	}
+	return "", fmt.Errorf("maximum number of iterations reached")
 }

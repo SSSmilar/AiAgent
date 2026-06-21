@@ -1,0 +1,42 @@
+name: CI & SonarCloud
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  sonarcloud:
+    name: Build, Lint and Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0  # Важно для истории коммитов Сонара
+
+      - name: Set up Go
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+        with:
+          go-version: '1.26'
+
+      - name: Run tests with coverage
+        run: go test -coverprofile=coverage.out ./...
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.59
+          # Выгружаем отчет в xml, чтобы Сонар его сожрал
+          args: --out-format checkstyle > golangci-lint-report.xml
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=SSSmilar_AiAgent
+            -Dsonar.organization=sssmilar
+            -Dsonar.go.coverage.reportPaths=coverage.out
+            -Dsonar.go.golangci-lint.reportPaths=golangci-lint-report.xml
