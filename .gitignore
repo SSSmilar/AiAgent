@@ -1,2 +1,5 @@
 .idea/
 .env
+SonarQube.yml
+.golangci.yml
+sonar-project.properties
