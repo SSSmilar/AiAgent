@@ -25,9 +25,10 @@ type Message struct {
 
 // ChatRequest  описывает то что мы отправляем (POST body).
 type ChatRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
-	Tools    []Tool    `json:"tools,omitempty"`
+	Model       string    `json:"model"`
+	Messages    []Message `json:"messages"`
+	Tools       []Tool    `json:"tools,omitempty"`
+	Temperature float64   `json:"temperature,omitempty"`
 }
 
 // ChatResponse описывает то что мы получаем в ответ.
@@ -155,6 +156,7 @@ func main() {
 			},
 		},
 	}
+
 	Plan(apiKey, MyTools, task)
 }
 func ask(apiKey string, tool []Tool, system string, dialogs []Message) (Message, error) {
