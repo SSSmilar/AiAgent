@@ -12,13 +12,10 @@ const writerSystem = "Ты - исполнитель. Напиши ОДИН пу�
 
 func Plan(apiKey string, MyTools []Tool, task string) {
 
-	response, err := ask(apiKey, MyTools, plannerSystem, []Message{{Role: "user", Content: task}})
+	response, err := ask(apiKey, nil, plannerSystem, []Message{{Role: "user", Content: task}})
 	if err != nil {
 		slog.Error("Error sending request to API ", "details", err)
 		os.Exit(1)
-	}
-	if len(response.Content) > 1 {
-
 	}
 	//Рубим на пукты для работы .
 	steps := strings.Split(response.Content, "\n")
@@ -37,12 +34,12 @@ func Plan(apiKey string, MyTools []Tool, task string) {
 
 		executor := Message{Role: "user", Content: prompt}
 
-		response, err := ask(apiKey, MyTools, writerSystem, []Message{executor})
+		response, err := ReAct(apiKey, MyTools, executor.Content, writerSystem)
 		if err != nil {
 			slog.Error("Error sending request to API ", "details", err)
 			os.Exit(1)
 		}
-		done = append(done, response.Content)
+		done = append(done, response)
 	}
 	//Вывожу ответы .
 	slog.Info("Done", "details", done)
